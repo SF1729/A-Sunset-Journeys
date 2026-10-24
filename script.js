@@ -555,3 +555,178 @@ function initManualTimerGlitch() {
     }
   });
 }
+
+/* ==========================================================================
+   DAKSHU — ADVANCED INTERACTION ENGINE (Audio Chimes + Heartbeat + Stars)
+   ========================================================================== */
+
+document.addEventListener("DOMContentLoaded", () => {
+  initCelestialChimes();
+  initHeartbeatHold();
+  initShootingStars();
+});
+
+// 1. CELESTIAL MUSIC BOX AUDIO (Web Audio API - No MP3 files needed)
+let audioCtx = null;
+const scaleFrequencies = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50]; // Pentatonic romantic scale
+
+function playChime(freqIndex = null) {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+
+    const freq = freqIndex !== null 
+      ? scaleFrequencies[freqIndex % scaleFrequencies.length] 
+      : scaleFrequencies[Math.floor(Math.random() * scaleFrequencies.length)];
+
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    osc.type = "sine"; // Pure music box bell tone
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+    // Soft chime envelope
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.22, audioCtx.currentTime + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 1.25);
+  } catch (err) {
+    // Audio context silent catch if browser blocks
+  }
+}
+
+function initCelestialChimes() {
+  // Har screen click / touch par pyara music-box bell chime bajega
+  window.addEventListener("pointerdown", () => playChime(), { passive: true });
+}
+
+// 2. HOLD FOR HEARTBEAT INTERACTION
+function initHeartbeatHold() {
+  const btn = document.getElementById("heartbeatBtn");
+  const fill = document.getElementById("holdProgressFill");
+  const label = document.getElementById("holdBtnText");
+  if (!btn || !fill || !label) return;
+
+  let holdTimer = null;
+  let progress = 0;
+  let hapticInterval = null;
+
+  function startHold(e) {
+    e.preventDefault();
+    progress = 0;
+    label.textContent = "Listening to heart...";
+    document.body.classList.add("heartbeat-screen-pulse");
+
+    // Real-time Heartbeat haptic loop (Lub-Dub sound & vibration)
+    if (navigator.vibrate) navigator.vibrate([60, 80, 60]);
+    playChime(2);
+
+    hapticInterval = setInterval(() => {
+      if (navigator.vibrate) navigator.vibrate([50, 70, 50]);
+      playChime(3);
+    }, 700);
+
+    // Charge progress to 100% in 2 seconds
+    holdTimer = setInterval(() => {
+      progress += 2.5;
+      fill.style.width = `${progress}%`;
+
+      if (progress >= 100) {
+        completeHeartbeat();
+      }
+    }, 50);
+  }
+
+  function cancelHold() {
+    clearInterval(holdTimer);
+    clearInterval(hapticInterval);
+    document.body.classList.remove("heartbeat-screen-pulse");
+
+    if (progress < 100) {
+      fill.style.width = "0%";
+      label.textContent = "Hold for Heartbeat";
+    }
+  }
+
+  function completeHeartbeat() {
+    clearInterval(holdTimer);
+    clearInterval(hapticInterval);
+    document.body.classList.remove("heartbeat-screen-pulse");
+
+    if (navigator.vibrate) navigator.vibrate([100, 50, 150, 50, 200]);
+
+    // High celebration chimes
+    playChime(4);
+    setTimeout(() => playChime(5), 200);
+
+    label.textContent = "Pulse Sent to Dakshu! 💛";
+    spawnConfettiBurst();
+
+    setTimeout(() => {
+      fill.style.width = "0%";
+      label.textContent = "Hold for Heartbeat";
+    }, 3500);
+  }
+
+  btn.addEventListener("mousedown", startHold);
+  btn.addEventListener("touchstart", startHold, { passive: false });
+
+  btn.addEventListener("mouseup", cancelHold);
+  btn.addEventListener("mouseleave", cancelHold);
+  btn.addEventListener("touchend", cancelHold);
+}
+
+// 3. GOLDEN HEART CONFETTI BURST (Jab Heartbeat complete ho)
+function spawnConfettiBurst() {
+  const emojis = ["💛", "✨", "🧡", "💖", "🌅"];
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2 + 100;
+
+  for (let i = 0; i < 35; i++) {
+    const el = document.createElement("span");
+    el.className = "interactive-trail-particle";
+    el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    el.style.left = `${centerX}px`;
+    el.style.top = `${centerY}px`;
+
+    const randomX = (Math.random() - 0.5) * 350;
+    const randomRot = Math.random() * 360;
+
+    el.style.setProperty("--rand-x", randomX.toFixed(0));
+    el.style.setProperty("--rand-rot", `${randomRot.toFixed(0)}deg`);
+
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+  }
+}
+
+// 4. SHOOTING STARS ON DOUBLE CLICK / TAP
+function initShootingStars() {
+  function triggerShootingStar(x, y) {
+    const star = document.createElement("div");
+    star.className = "shooting-star";
+    star.style.left = `${x || (window.innerWidth - 100)}px`;
+    star.style.top = `${y || Math.random() * 250 + 50}px`;
+
+    document.body.appendChild(star);
+    playChime(5);
+    setTimeout(() => star.remove(), 1000);
+  }
+
+  // Screen par kahin bhi double-click karein to shooting star aayega
+  window.addEventListener("dblclick", (e) => triggerShootingStar(e.clientX, e.clientY));
+
+  // Automatic random shooting star every 12 to 20 seconds
+  setInterval(() => {
+    triggerShootingStar(window.innerWidth - Math.random() * 200, Math.random() * 200);
+  }, 15000);
+}
